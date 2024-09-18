@@ -4,15 +4,18 @@ import { Picker } from '@react-native-picker/picker'; // Asegúrate de instalar 
 import { Colors } from '@/constants/Colors';
 import { SelectCursosList, SelectTipoCurso } from './../constants/Options';
 import { TextInput } from 'react-native-paper';
-import { getFirestore } from 'firebase/firestore';
-const firestore = getFirestore();
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore'; // Asegúrate de importar correctamente los métodos de Firestore
+import { useNavigation } from '@react-navigation/native';  // Importa el hook de navegación
+
 const { width } = Dimensions.get('window');
 const isSmallScreen = width < 600;
 
 export default function Cursos() {
-    const [selectedYear, setSelectedYear] = useState<string | null>(null);
-    const [selectedTipoCurso, setSelectedTipoCurso] = useState<string | null>(null);
-    const [courseName, setCourseName] = useState<string>('');
+    const [selectedYear, setSelectedYear] = useState<string>(''); // Inicializa como string vacío
+    const [selectedTipoCurso, setSelectedTipoCurso] = useState<string>(''); // Inicializa como string vacío
+    const [courseName, setCourseName] = useState<string>(''); // Inicializa como string vacío
+
+    const navigation = useNavigation();  // Inicializa la navegación
 
     // Función para manejar el botón "Agregar"
     const handleContinue = async () => {
@@ -22,17 +25,21 @@ export default function Cursos() {
         }
 
         try {
-            await getFirestore().collection('materias').add({
+            const db = getFirestore();
+            await addDoc(collection(db, 'materias'), {  // addDoc espera una colección y un objeto, no un array.
                 courseName: courseName,
                 year: selectedYear,
                 tipoCurso: selectedTipoCurso,
-                createdAt: firestore.FieldValue.serverTimestamp(), // Timestamp para la fecha de creación
+                createdAt: serverTimestamp(),
             });
 
             Alert.alert('Éxito', 'Materia agregada exitosamente');
             setCourseName('');
-            setSelectedYear(null);
-            setSelectedTipoCurso(null);
+            setSelectedYear('');
+            setSelectedTipoCurso('');
+
+            // Redirigir a la página "myInicio" después del éxito
+            navigation.navigate('myInicio' as never);
         } catch (error) {
             Alert.alert('Error', 'Ocurrió un error al agregar la materia');
             console.error(error);
@@ -55,9 +62,9 @@ export default function Cursos() {
             <Picker
                 selectedValue={selectedYear}
                 style={styles(isSmallScreen).picker}
-                onValueChange={(itemValue) => setSelectedYear(itemValue as string)}
+                onValueChange={(itemValue: string) => setSelectedYear(itemValue)}  // Tipado explícito
             >
-                <Picker.Item label="Seleccione un Año" value={null} />
+                <Picker.Item label="Seleccione un Año" value="" />
                 {SelectCursosList.map((item) => (
                     <Picker.Item key={item.id} label={item.title} value={item.id.toString()} />
                 ))}
@@ -67,10 +74,10 @@ export default function Cursos() {
             <Picker
                 selectedValue={selectedTipoCurso}
                 style={[styles(isSmallScreen).picker, { opacity: selectedYear ? 1 : 0.5 }]}
-                onValueChange={(itemValue) => setSelectedTipoCurso(itemValue as string)}
+                onValueChange={(itemValue: string) => setSelectedTipoCurso(itemValue)}  // Tipado explícito
                 enabled={!!selectedYear}
             >
-                <Picker.Item label="Seleccione un Tipo de Curso" value={null} />
+                <Picker.Item label="Seleccione un Tipo de Curso" value="" />
                 {SelectTipoCurso.map((item) => (
                     <Picker.Item key={item.id} label={item.title} value={item.id.toString()} />
                 ))}
@@ -91,17 +98,6 @@ const styles = (isSmallScreen: boolean) =>
             backgroundColor: "#fff",
             padding: isSmallScreen ? 16 : 32,
         },
-        title: {
-            fontFamily: 'outfit-Medium',
-            fontSize: isSmallScreen ? 24 : 32,
-            marginBottom: 20,
-            textAlign: 'center',
-        },
-        label: {
-            fontFamily: 'outfit-Bold',
-            fontSize: 16,
-            marginBottom: 8,
-        },
         input: {
             width: isSmallScreen ? "90%" : "50%",
             height: 40,
@@ -120,10 +116,6 @@ const styles = (isSmallScreen: boolean) =>
         buttonText: {
             color: "#fff",
             fontSize: 16,
-        },
-        error: {
-            color: 'red',
-            marginBottom: 10,
         },
         picker: {
             width: isSmallScreen ? '90%' : '50%',
